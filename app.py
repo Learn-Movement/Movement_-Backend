@@ -125,7 +125,7 @@ def compile_move(request: CompileRequest):
                 cwd=tmp,
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=600
             )
 
             # -------------------------------------------------------
