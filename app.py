@@ -17,11 +17,14 @@ app = FastAPI(
 # They point to /frameworks/aptos-core/... which we baked into the Docker image.
 # This makes compilation offline and instant.
 # -------------------------------------------------------------------
+# UPDATED Move.toml template to Allow move 2 language
+# -------------------------------------------------------------------
 MOVE_TOML = """\
 [package]
 name = "compiler_package"
 version = "1.0.0"
 upgrade_policy = "compatible"
+edition = "2024.beta"  <-- THIS IS THE MAGIC LINE TO FIX THE ERROR
 
 [addresses]
 std = "0x1"
@@ -29,10 +32,8 @@ aptos_framework = "0x1"
 hello = "0x42"
 
 [dependencies]
-# We pull MoveStdlib from the aptos-core repo to ensure compatibility
+# Pointing to the COPIED path inside the container
 MoveStdlib = { local = "/frameworks/aptos-core/aptos-move/framework/move-stdlib" }
-
-# We pull AptosFramework from the same local repo
 AptosFramework = { local = "/frameworks/aptos-core/aptos-move/framework/aptos-framework" }
 """
 
