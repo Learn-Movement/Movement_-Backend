@@ -65,7 +65,7 @@ def compile_move(request: CompileRequest):
                 cwd=tmp,
                 capture_output=True,
                 text=True,
-                timeout=60 # Reduced timeout because it should be instant now
+                timeout=400 # Reduced timeout because it should be instant now
             )
 
             if result.returncode != 0:
