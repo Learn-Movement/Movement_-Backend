@@ -1,22 +1,61 @@
-FROM ubuntu:22.04
+# syntax=docker/dockerfile:1
 
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Dockerfile reference guide at
+# https://docs.docker.com/go/dockerfile-reference/
+
+# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+
+ARG PYTHON_VERSION=3.12.0
+ARG NODE_VERSION=20
+
+# -----------------------------------------------------------------------------
+# Frontend build (Next.js)
+# -----------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-bookworm-slim AS frontend-deps
+WORKDIR /client
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+
+FROM node:${NODE_VERSION}-bookworm-slim AS frontend-build
+WORKDIR /client
+COPY --from=frontend-deps /client/node_modules ./node_modules
+COPY client/ ./
+RUN npm run build
+
+FROM node:${NODE_VERSION}-bookworm-slim AS frontend
+ENV NODE_ENV=production
+WORKDIR /client
+COPY client/package.json client/package-lock.json ./
+RUN npm ci --omit=dev
+COPY --from=frontend-build /client/.next ./.next
+COPY --from=frontend-build /client/public ./public
+COPY --from=frontend-build /client/next.config.ts ./next.config.ts
+EXPOSE 3000
+CMD ["npm", "run", "start"]
+
+# -----------------------------------------------------------------------------
+# Backend (FastAPI + Movement CLI)
+# -----------------------------------------------------------------------------
+FROM python:${PYTHON_VERSION}-slim AS backend
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 1. Install system dependencies
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     curl \
     git \
     build-essential \
-    python3 \
-    python3-pip \
-    ca-certificates \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install Rust
+# Install Rust (needed by Movement toolchain)
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:$PATH"
 
-# 3. Install Movement CLI
+# Install Movement CLI
 RUN curl -LO https://github.com/movementlabsxyz/homebrew-movement-cli/releases/download/bypass-homebrew/movement-move2-testnet-linux-x86_64.tar.gz \
  && mkdir temp_extract \
  && tar -xzf movement-move2-testnet-linux-x86_64.tar.gz -C temp_extract \
@@ -24,18 +63,16 @@ RUN curl -LO https://github.com/movementlabsxyz/homebrew-movement-cli/releases/d
  && mv temp_extract/movement /usr/local/bin/movement \
  && rm -rf temp_extract movement-move2-testnet-linux-x86_64.tar.gz
 
-# ---------------------------------------------------------------------------
-# 4. BAKE THE DEPENDENCIES (The Fix)
-# We clone aptos-core once at build time. 
-# We use --depth 1 to avoid downloading the entire git history (saves GBs).
-# ---------------------------------------------------------------------------
+# Bake aptos-core dependency once at build time
 WORKDIR /frameworks
 RUN git clone --depth 1 --branch main https://github.com/aptos-labs/aptos-core.git
 
-# 5. Setup App
 WORKDIR /app
-COPY . .
-RUN pip3 install -r requirements.txt
+COPY requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install -r requirements.txt
 
-EXPOSE 10000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]
+COPY app.py formatter.py Move.toml ./
+
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
