@@ -5,16 +5,12 @@ module aptos_framework::table {
         abort 0
     }
 
-    public fun add<K, V>(
-        _table: &mut Table<K, V>,
-        _key: K,
-        _value: V
-    ) {}
-
-    public fun borrow<K, V>(
-        _table: &Table<K, V>,
-        _key: K
-    ): &V {
+    // --- FIX HERE: Add abort 0 ---
+    public fun add<K, V>(_table: &mut Table<K, V>, _key: K, _value: V) {
         abort 0
     }
-} 
+
+    public fun borrow<K, V>(_table: &Table<K, V>, _key: K): &V {
+        abort 0
+    }
+}
