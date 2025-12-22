@@ -2,14 +2,15 @@ module aptos_framework::coin {
     use std::signer;
     use std::string;
 
-    struct Coin<T> has store {
+    // FIX: 'phantom T' allows T to lack abilities.
+    // FIX: 'drop' allows Coin to be dropped (user request/stub convenience).
+    struct Coin<phantom T> has store, drop {
         value: u64
     }
 
-    // FIX: Added 'copy' to match real Aptos (Caps are usually copyable)
-    struct MintCapability<T> has copy, store {}
-    struct BurnCapability<T> has copy, store {}
-    struct FreezeCapability<T> has copy, store {}
+    struct MintCapability<phantom T> has copy, store {}
+    struct BurnCapability<phantom T> has copy, store {}
+    struct FreezeCapability<phantom T> has copy, store {}
 
     public fun balance<T>(_addr: address): u64 { 0 }
     public fun register<T>(_account: &signer) {}
@@ -28,7 +29,6 @@ module aptos_framework::coin {
         abort 0
     }
 
-    // FIX: Added 'abort 0' to handle the lack of 'drop' ability
     public fun destroy_burn_cap<T>(_cap: BurnCapability<T>) { abort 0 }
     public fun destroy_freeze_cap<T>(_cap: FreezeCapability<T>) { abort 0 }
     public fun destroy_mint_cap<T>(_cap: MintCapability<T>) { abort 0 }
