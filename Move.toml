@@ -14,11 +14,8 @@ hello = "0x42"
 # movement = "0x123"
 
 [dependencies]
-MoveStdlib = { 
-    git = "https://github.com/move-language/move",
-    subdir = "language/move-stdlib",
-    rev = "main"
-}
+MoveStdlib = { local = "/frameworks/aptos-core/aptos-move/framework/move-stdlib" }
+AptosFramework = { local = "/frameworks/stubbed-aptos-framework/aptos_framework" }
 
 AptosFramework = {
     git = "https://github.com/aptos-labs/aptos-core",
