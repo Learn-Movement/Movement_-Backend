@@ -43,6 +43,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
+# 1. Install System Dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
@@ -50,11 +51,11 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust (needed by Movement toolchain)
+# 2. Install Rust (Required for Movement CLI runtime)
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:$PATH"
 
-# Install Movement CLI
+# 3. Install Movement CLI
 RUN curl -LO https://github.com/movementlabsxyz/homebrew-movement-cli/releases/download/bypass-homebrew/movement-move2-testnet-linux-x86_64.tar.gz \
  && mkdir temp_extract \
  && tar -xzf movement-move2-testnet-linux-x86_64.tar.gz -C temp_extract \
@@ -62,18 +63,26 @@ RUN curl -LO https://github.com/movementlabsxyz/homebrew-movement-cli/releases/d
  && mv temp_extract/movement /usr/local/bin/movement \
  && rm -rf temp_extract movement-move2-testnet-linux-x86_64.tar.gz
  
-# Bake Aptos stdlib once at build time (NO GIT AT RUNTIME)
+# 4. Install Frameworks
 WORKDIR /frameworks
+
+# A) Download full Aptos Core (For MoveStdlib only - small & safe)
 RUN curl -L https://github.com/aptos-labs/aptos-core/archive/refs/heads/main.tar.gz \
     | tar -xz \
  && mv aptos-core-main aptos-core
- 
+
+# B) Copy your LOCAL Stubbed Framework (For AptosFramework - prevents OOM crash)
+# This assumes your local folder is: ./frameworks/stubbed-aptos-framework
+COPY frameworks/stubbed-aptos-framework /frameworks/stubbed-aptos-framework
+
+# 5. Setup Python App
 WORKDIR /app
 COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install -r requirements.txt
 
-COPY app.py formatter.py Move.toml ./
+# Copy application code
+COPY app.py formatter.py ./
 
 EXPOSE 8000
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
