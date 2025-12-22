@@ -10,4 +10,4 @@ hello = "0x42"
 
 [dependencies]
 MoveStdlib = { local = "/frameworks/aptos-core/aptos-move/framework/move-stdlib" }
-AptosFramework = { local = "/frameworks/stubbed-aptos-framework/aptos_framework" }
+AptosFramework = { local = "/frameworks/stubbed-aptos-framework/aptos-framework" }
