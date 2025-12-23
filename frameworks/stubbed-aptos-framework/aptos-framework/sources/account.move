@@ -15,4 +15,7 @@ module aptos_framework::account {
     public fun get_guid_next_creation_num(_addr: address): u64 { 0 }
     public fun get_sequence_number(_addr: address): u64 { 0 }
     public fun get_authentication_key(_addr: address): vector<u8> { std::vector::empty() }
+    public fun new_event_handle<T: drop + store>(_account: &signer): event::EventHandle<T> {
+        abort 0
+    }
 }
