@@ -7,32 +7,6 @@
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
 ARG PYTHON_VERSION=3.12.0
-ARG NODE_VERSION=20
-
-# -----------------------------------------------------------------------------
-# Frontend build (Next.js)
-# -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-bookworm-slim AS frontend-deps
-WORKDIR /client
-COPY client/package.json client/package-lock.json ./
-RUN npm ci
-
-FROM node:${NODE_VERSION}-bookworm-slim AS frontend-build
-WORKDIR /client
-COPY --from=frontend-deps /client/node_modules ./node_modules
-COPY client/ ./
-RUN npm run build
-
-FROM node:${NODE_VERSION}-bookworm-slim AS frontend
-ENV NODE_ENV=production
-WORKDIR /client
-COPY client/package.json client/package-lock.json ./
-RUN npm ci --omit=dev
-COPY --from=frontend-build /client/.next ./.next
-COPY --from=frontend-build /client/public ./public
-COPY --from=frontend-build /client/next.config.ts ./next.config.ts
-EXPOSE 3000
-CMD ["npm", "run", "start"]
 
 # -----------------------------------------------------------------------------
 # Backend (FastAPI + Movement CLI)
