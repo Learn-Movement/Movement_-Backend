@@ -1,4 +1,4 @@
-# Backend Compiler Service
+### Backend Compiler Service
 Here is the official, technical documentation for the Movement Compiler Backend. This is written for other developers, ensuring they understand the architecture, how to run it, and how to build the frontend against it.
 
 # Movement Compiler Service: Technical Documentation
@@ -57,9 +57,11 @@ Accepts Move source code, compiles it, and returns Base64-encoded bytecode.
 REQUEST BODY
 code JSON
 
-   {
-  "code": "module hello::counter { use std::signer; ... }"
+{
+  "code": "module hello::counter { use std::signer; ... }",
+  "sender_address": "0x1234..." // (Optional) Defaults to 0x1. Set this to the user's wallet address for deployment.
 }
+
  
 Response: Success
 When compilation succeeds (returncode == 0):
@@ -104,14 +106,18 @@ code JSON
 
 # 5. Frontend Integration Guide
 The frontend is responsible for submitting code to this API and handling the deployment using a Wallet Adapter. The backend does not deploy code.
+Calling the API (Next.js Example):
+// inside your compile function
+const res = await axios.post("https://movement-sqto.onrender.com/compile", {
+  code: code,
+  sender_address: walletAccount.address // <--- CRITICAL: Pass connected wallet address
+});
 A. Handling Successful Compilation
 The frontend receives Base64 strings. The Blockchain RPC requires Uint8Array.
 1. Decode Helper:
 code TypeScript
 
-   const decodeBase64 = (str: string): Uint8Array => {
-  const binaryString = atob(str);
-  const bytes = new Uint8Array(binaryString.length);
+   consw Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
@@ -157,6 +163,12 @@ Highligting: Use line and column to highlight syntax errors in the Code Editor (
 Message: Display message and source_line in a console output window.
 
 # 6. Architecture & Maintenance Notes
+Dynamic Address Injection
+To ensure deployed bytecode belongs to the correct user, the backend performs Dynamic Compilation:
+The API accepts a sender_address (e.g., 0xA1B2...).
+It dynamically generates a Move.toml for that specific request, injecting the address into the hello named address.
+The compiler bakes this address into the binary.
+Result: The bytecode signature matches the user's wallet, allowing successful on-chain validation.
 The Stubbed Framework Strategy
 Location: /frameworks/stubbed-aptos-framework inside the container.
 Logic: We replaced implementation files with "Ghost Files".
@@ -208,7 +220,15 @@ code JSON
   "modules": [ ... ],
   ...
 }
- 
+
+Basic Sanity Check (With Address)
+Run this to confirm the server accepts a sender address.
+curl -s -X POST https://movement-sqto.onrender.com/compile \
+  -H "Content-Type: application/json" \
+  -d '{ 
+    "code": "module hello::sanity_check { public fun main() {} }",
+    "sender_address": "0xCAFE"
+  }' | jq
 B. Full Integration Test (Stub Verification)
 This command tests the entire "Micro-Framework" by importing Coin, Table, Object, and ResourceAccount. Use this to prove to investors/devs that the lightweight architecture supports complex logic.
 Copy and paste this entire block:
@@ -218,7 +238,7 @@ code Bash
   -H "Content-Type: application/json" \
   -d '{
     "code": "module hello::final_edge_case { use std::signer; use std::vector; use std::option::{Self, Option}; use std::string::String; use aptos_framework::coin::{Self, Coin}; use aptos_framework::table::{Self, Table}; use aptos_framework::timestamp; use aptos_framework::object::{Self, Object}; use aptos_framework::resource_account; struct TestCoin has drop {} struct Vault has key { balances: Table<String, Coin<TestCoin>>, last_touch: u64, backup: Option<Coin<TestCoin>>, objects: vector<Object<TestCoin>> } public entry fun init(admin: &signer) { let (res, _) = resource_account::create_resource_account(admin, b\"vault_seed\"); let t = table::new<String, Coin<TestCoin>>(); let o = option::none<Coin<TestCoin>>(); let v = vector::empty<Object<TestCoin>>(); move_to(&res, Vault { balances: t, last_touch: timestamp::now_seconds(), backup: o, objects: v }); } public fun touch(user: &signer, c: Coin<TestCoin>, key: String) acquires Vault { let addr = signer::address_of(user); let vault = borrow_global_mut<Vault>(addr); table::add(&mut vault.balances, key, c); vault.last_touch = timestamp::now_seconds(); } }"
-  }' | jq
+  }' 
  
 C. Troubleshooting Common Errors
 Output / Error
@@ -237,33 +257,4 @@ Check your code for typos (e.g., let mut in Move 1.0 mode).
 Missing Import.
 Ensure your Move code uses use aptos_framework::xxx;.
 
-
-Option 2: Python Script Update (If you used the generator)
-If you are using the generate_docs.py script I gave you earlier, add this code block just before doc.save(...):
-code Python
-
-   8. CLI Testing
-    doc.add_heading('8. CLI Testing Guide (Linux/WSL)', level=1)
-    doc.add_paragraph('You can verify the backend status and compilation logic directly from your terminal using curl.')
-    
-    doc.add_heading('Basic Sanity Check', level=2)
-    basic_curl = """curl -s -X POST https://movement-sqto.onrender.com/compile \\
-  -H "Content-Type: application/json" \\
-  -d '{ "code": "module 0x1::sanity_check { public fun main() {} }" }' | jq"""
-    p = doc.add_paragraph(basic_curl)
-    p.style = 'No Spacing'
-    p.runs[0].font.name = 'Courier New'
-    p.runs[0].font.size = Pt(9)
-
-    doc.add_heading('Full Integration Test', level=2)
-    doc.add_paragraph('This tests Coin, Table, Object, and ResourceAccount imports:')
-    
-    complex_curl = """curl -s -X POST https://movement-sqto.onrender.com/compile \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "code": "module hello::final_edge_case { use std::signer; use std::vector; use std::option::{Self, Option}; use std::string::String; use aptos_framework::coin::{Self, Coin}; use aptos_framework::table::{Self, Table}; use aptos_framework::timestamp; use aptos_framework::object::{Self, Object}; use aptos_framework::resource_account; struct TestCoin has drop {} struct Vault has key { balances: Table<String, Coin<TestCoin>>, last_touch: u64, backup: Option<Coin<TestCoin>>, objects: vector<Object<TestCoin>> } public entry fun init(admin: &signer) { let (res, _) = resource_account::create_resource_account(admin, b\\"vault_seed\\"); let t = table::new<String, Coin<TestCoin>>(); let o = option::none<Coin<TestCoin>>(); let v = vector::empty<Object<TestCoin>>(); move_to(&res, Vault { balances: t, last_touch: timestamp::now_seconds(), backup: o, objects: v }); } public fun touch(user: &signer, c: Coin<TestCoin>, key: String) acquires Vault { let addr = signer::address_of(user); let vault = borrow_global_mut<Vault>(addr); table::add(&mut vault.balances, key, c); vault.last_touch = timestamp::now_seconds(); } }"
-  }' | jq"""
-    p = doc.add_paragraph(complex_curl)
-    p.style = 'No Spacing'
-    p.runs[0].font.name = 'Courier New'
-    p.runs[0].font.size = Pt(8)
+ 
