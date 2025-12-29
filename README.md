@@ -1,7 +1,7 @@
 ### Backend Compiler Service
 Here is the official, technical documentation for the Movement Compiler Backend. This is written for other developers, ensuring they understand the architecture, how to run it, and how to build the frontend against it.
 
-# Movement Compiler Service: Technical Documentation
+##  Movement Compiler Service: Technical Documentation
 # 1. System Overview
 The Movement Compiler Service is a specialized, stateless backend designed to compile Move smart contracts in resource-constrained environments (specifically Render Free Tier with 512MB RAM).
 Unlike standard Move compilers that load the entire 1.5GB+ Aptos Framework into memory, this service utilizes a Stubbed Framework Architecture. It compiles against lightweight "Interface Files" (stubs) rather than heavy implementation files, reducing memory footprint by ~90% while ensuring complete type safety and valid bytecode generation.
